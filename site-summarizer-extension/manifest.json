@@ -2,15 +2,34 @@
   "manifest_version": 3,
   "name": "Site Summarizer (ChatGPT / Gemini)",
   "version": "1.0.0",
-  "description": "現在のタブの内容を要約し、新しいタブで表示します。",
+
   "action": {
     "default_title": "要約",
     "default_popup": "popup.html"
   },
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+
   "host_permissions": [
     "https://api.openai.com/*",
     "https://generativelanguage.googleapis.com/*"
   ],
-  "background": { "service_worker": "background.js" }
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "commands": {
+    "summarize-now": {
+      "suggested_key": {
+        "default": "Alt+G"
+      },
+      "description": "現在のタブを要約する"
+    }
+  }
 }
