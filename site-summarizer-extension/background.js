@@ -193,7 +193,7 @@ if(0 <= usedModel.indexOf("gpt-5")) {
       if (delta) onDelta(delta);
 
       // たまに別形式が混じる場合の保険（textフィールド拾い）
-      if (!delta && typeof obj?.text === "string") onDelta(obj.text);
+      //if (!delta && typeof obj?.text === "string") onDelta(obj.text);
     }
   }
 }
@@ -335,3 +335,4 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 log("service worker loaded");
+
