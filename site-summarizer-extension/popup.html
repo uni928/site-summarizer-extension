@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>要約</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; width: 320px; margin: 12px; }
+      label { display: block; margin-top: 10px; font-size: 12px; opacity: 0.85; }
+      input, select, textarea, button { width: 100%; box-sizing: border-box; margin-top: 6px; }
+      input, select, textarea { padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+      button { padding: 10px; border: 0; border-radius: 10px; cursor: pointer; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .muted { font-size: 12px; opacity: 0.75; margin-top: 8px; }
+      .error { color: #b00020; font-size: 12px; margin-top: 8px; white-space: pre-wrap; }
+      .ok { color: #0a7a2f; font-size: 12px; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <div>
+        <label>プロバイダ</label>
+        <select id="provider">
+          <option value="openai">ChatGPT (OpenAI)</option>
+          <option value="gemini">Gemini</option>
+        </select>
+      </div>
+      <div>
+        <label>文字数（出力目安）</label>
+        <select id="length">
+          <option value="short">短め</option>
+          <option value="medium" selected>普通</option>
+          <option value="long">長め</option>
+        </select>
+      </div>
+    </div>
+
+    <label>API Key（初回のみ設定）</label>
+    <input id="apiKey" type="password" placeholder="貼り付けて保存" />
+
+    <label>モデル（任意）</label>
+    <input id="model" type="text" placeholder="例: gpt-4o-mini / gemini-2.5-flash" />
+
+    <div class="row" style="margin-top:10px;">
+      <button id="saveBtn">設定を保存</button>
+      <button id="summarizeBtn">要約する</button>
+    </div>
+
+    <div class="muted">
+      ※ 現在のタブの本文から抽出して要約します（長文は先頭側を優先して切り詰めます）。
+    </div>
+    <div id="status" class=""></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

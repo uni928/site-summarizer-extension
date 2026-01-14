@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>要約</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 0; background: #f6f7f9; }
+      .wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
+      .card { background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 6px 22px rgba(0,0,0,.06); }
+      h1 { font-size: 18px; margin: 0 0 8px; }
+      .meta { font-size: 12px; opacity: .75; display: grid; gap: 4px; }
+      .meta a { color: inherit; }
+      pre { white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.6; margin: 14px 0 0; }
+      .btns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+      button { padding: 10px 12px; border: 1px solid #ddd; background: #fff; border-radius: 12px; cursor: pointer; }
+      button:hover { background: #fafafa; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1 id="title">要約</h1>
+        <div class="meta" id="meta"></div>
+
+        <div class="btns">
+          <button id="copyBtn">要約をコピー</button>
+          <button id="openBtn">元ページを開く</button>
+        </div>
+
+        <pre id="summary"></pre>
+      </div>
+    </div>
+
+    <script src="summary.js"></script>
+  </body>
+</html>
