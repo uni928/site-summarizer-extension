@@ -104,38 +104,47 @@ function sendToSummary(key, msg) {
   chrome.runtime.sendMessage({ ...msg, key }).catch(() => {});
 }
 
+// Chat Completions / SSE 用のパーサ（CRLF対応・複数data行対応）
+// 返り値: { events: string[], rest: string }
+// events には「data:」の中身（文字列）が入ります。"[DONE]" もそのまま入ります。
 function parseSSELines(buffer) {
-  // ✅ CRLF を LF に正規化（GeminiのSSEで効く）
+  // ✅ Windows/プロキシ等で CRLF になっても壊れないように正規化
   const normalized = buffer.replace(/\r\n/g, "\n");
 
-  // SSEは「空行」でイベント区切り
   const events = [];
-  const parts = normalized.split("\n\n");
-  const rest = parts.pop() ?? "";
+  const parts = normalized.split("\n\n"); // 空行でイベント区切り
+  const rest = parts.pop() ?? "";         // 未完の末尾は次回へ持ち越し
 
   for (const chunk of parts) {
-    // data: が複数行になることがあるので全部拾って連結
+    // SSE 1イベントは複数行になり得る（data: が複数行）
+    // Chat Completions は通常 JSON 1行だが、保険で連結する
     const dataLines = chunk
       .split("\n")
-      .filter(line => line.startsWith("data:"))
-      .map(line => line.slice(5).trim());
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim());
 
-    if (dataLines.length) {
-      events.push(dataLines.join("\n"));
-    }
+    if (!dataLines.length) continue;
+
+    // data が複数行なら改行で連結（JSONが分割されるケースの保険）
+    const data = dataLines.join("\n").trim();
+    if (data) events.push(data);
   }
 
   return { events, rest };
 }
 
 
+
 async function streamOpenAI({ apiKey, model, prompt, onDelta }) {
-  const usedModel = model || "gpt-5-mini";
+  const usedModel = (model || "gpt-5-mini").trim();
+
+  // ✅ messages を必ずここで作る（スコープ問題回避）
+  const messages = [{ role: "user", content: prompt }];
 
   let resp;
 
 if(0 <= usedModel.indexOf("gpt-5")) {
- resp = await fetch("https://api.openai.com/v1/responses", {
+resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
@@ -143,7 +152,7 @@ if(0 <= usedModel.indexOf("gpt-5")) {
     },
     body: JSON.stringify({
       model: usedModel,
-      input: prompt,
+      messages,
       stream: true,
       reasoning_effort: "minimal",
 service_tier: "flex", // ←追加
@@ -151,7 +160,7 @@ service_tier: "flex", // ←追加
   });
 
 if (!resp.ok && resp.status === 429) {
- resp = await fetch("https://api.openai.com/v1/responses", {
+resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
@@ -159,15 +168,15 @@ if (!resp.ok && resp.status === 429) {
     },
     body: JSON.stringify({
       model: usedModel,
-      input: prompt,
+      messages,
       stream: true,
-      reasoning_effort: "minimal",
+      reasoning_effort: "minimal"
     })
   });
 }
 
 } else {
- resp = await fetch("https://api.openai.com/v1/responses", {
+resp = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
@@ -175,17 +184,17 @@ if (!resp.ok && resp.status === 429) {
     },
     body: JSON.stringify({
       model: usedModel,
-      input: prompt,
-      stream: true
+      messages,
+      stream: true,
     })
   });
 }
-
 
   if (!resp.ok) {
     const t = await resp.text().catch(() => "");
     throw new Error(`OpenAI API error: ${resp.status} ${resp.statusText}\n${t}`);
   }
+  if (!resp.body) throw new Error("OpenAI response body is empty (no stream).");
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder("utf-8");
@@ -200,17 +209,17 @@ if (!resp.ok && resp.status === 429) {
     buf = parsed.rest;
 
     for (const data of parsed.events) {
+      if (!data) continue;
       if (data === "[DONE]") return;
 
       let obj;
       try { obj = JSON.parse(data); } catch { continue; }
 
-      // 代表: type === "response.output_text.delta", delta が文字列 :contentReference[oaicite:3]{index=3}
-      const delta = (typeof obj?.delta === "string") ? obj.delta : "";
-      if (delta) onDelta(delta);
-
-      // たまに別形式が混じる場合の保険（textフィールド拾い）
-      //if (!delta && typeof obj?.text === "string") onDelta(obj.text);
+      // ✅ chat/completions のストリーム delta はここ
+      const delta = obj?.choices?.[0]?.delta?.content;
+      if (typeof delta === "string" && delta) {
+        onDelta(delta);
+      }
     }
   }
 }
@@ -407,7 +416,7 @@ async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
   // 先に summary タブを開く（高速表示用）
   const usedProvider = provider === "gemini" ? "gemini" : "openai";
   const usedModel =
-    model || (usedProvider === "gemini" ? "gemini-2.5-flash" : "gpt-4o-mini");
+    model || (usedProvider === "gemini" ? "gemini-2.5-flash" : "gpt-5-mini");
 
   const { key } = await openSummaryTabInitial({
     title: page.title,
