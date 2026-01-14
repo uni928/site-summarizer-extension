@@ -351,4 +351,101 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true; // async
 });
 
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "summarize-now") return;
+
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+    if (!tab?.id) return;
+
+    const {
+      provider = "openai",
+      apiKey = "",
+      model = "",
+      length = "medium"
+    } = await chrome.storage.sync.get([
+      "provider",
+      "apiKey",
+      "model",
+      "length"
+    ]);
+
+    if (!apiKey) {
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL("popup.html")
+      });
+      return;
+    }
+
+    await handleSummarizeCore({
+      tabId: tab.id,
+      provider,
+      apiKey,
+      model,
+      length
+    });
+
+  } catch (e) {
+    console.error("Alt+G summarize error:", e);
+  }
+});
+
+
+async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
+  if (!tabId) throw new Error("tabId is missing.");
+  if (!apiKey) throw new Error("API Key is empty.");
+
+  const page = await extractFromTab(tabId);
+
+  if (!page.text || page.text.length < 80) {
+    throw new Error("本文が十分に取得できませんでした。");
+  }
+
+  // 先に summary タブを開く（高速表示用）
+  const usedProvider = provider === "gemini" ? "gemini" : "openai";
+  const usedModel =
+    model || (usedProvider === "gemini" ? "gemini-1.5-flash" : "gpt-4o-mini");
+
+  const { key } = await openSummaryTabInitial({
+    title: page.title,
+    url: page.url,
+    provider: usedProvider,
+    model: usedModel
+  });
+
+  const prompt = buildPrompt(page, length);
+
+  let total = "";
+
+  const onDelta = (d) => {
+    total += d;
+    sendToSummary(key, { type: "SUMMARY_DELTA", delta: d });
+  };
+
+  if (usedProvider === "gemini") {
+    await streamGemini({ apiKey, model: usedModel, prompt, onDelta });
+  } else {
+    await streamOpenAI({ apiKey, model: usedModel, prompt, onDelta });
+  }
+
+  await chrome.storage.session.set({
+    [key]: {
+      ok: true,
+      provider: usedProvider,
+      model: usedModel,
+      title: page.title,
+      url: page.url,
+      summary: total,
+      createdAt: new Date().toISOString()
+    }
+  });
+
+  sendToSummary(key, { type: "SUMMARY_DONE" });
+}
+
+
+
 log("service worker loaded");
