@@ -130,7 +130,6 @@ function parseSSELines(buffer) {
 
 
 async function streamOpenAI({ apiKey, model, prompt, onDelta }) {
-  // OpenAI Responses streaming: stream:true（SSE） :contentReference[oaicite:2]{index=2}
   const usedModel = model || "gpt-5-mini";
 
   let resp;
@@ -147,8 +146,26 @@ if(0 <= usedModel.indexOf("gpt-5")) {
       input: prompt,
       stream: true,
       reasoning_effort: "minimal",
+service_tier: "flex", // ←追加
     })
   });
+
+if (!resp.ok && resp.status === 429) {
+ resp = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: usedModel,
+      input: prompt,
+      stream: true,
+      reasoning_effort: "minimal",
+    })
+  });
+}
+
 } else {
  resp = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -335,4 +352,3 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 log("service worker loaded");
-
