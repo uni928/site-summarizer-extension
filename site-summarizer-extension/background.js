@@ -136,7 +136,7 @@ function parseSSELines(buffer) {
 
 
 async function streamOpenAI({ apiKey, model, prompt, onDelta }) {
-  const usedModel = (model || "gpt-5-mini").trim();
+  const usedModel = (model || "gpt-5-nano").trim();
 
   // ✅ messages を必ずここで作る（スコープ問題回避）
   const messages = [{ role: "user", content: prompt }];
@@ -307,7 +307,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
       // ✅ 先にタブを開く（体感速度アップ）
       const usedProvider = provider === "gemini" ? "gemini" : "openai";
-      const usedModel = model || (usedProvider === "gemini" ? "gemini-2.5-flash" : "gpt-5-mini");
+      const usedModel = model || (usedProvider === "gemini" ? "gemini-1.5-flash" : "gpt-5-nano");
       const { key } = await openSummaryTabInitial({
         title: page.title,
         url: page.url,
@@ -416,7 +416,7 @@ async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
   // 先に summary タブを開く（高速表示用）
   const usedProvider = provider === "gemini" ? "gemini" : "openai";
   const usedModel =
-    model || (usedProvider === "gemini" ? "gemini-1.5-flash" : "gpt-5-mini");
+    model || (usedProvider === "gemini" ? "gemini-1.5-flash" : "gpt-5-nano");
 
   const { key } = await openSummaryTabInitial({
     title: page.title,
@@ -458,4 +458,5 @@ async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
 
 
 log("service worker loaded");
+
 
