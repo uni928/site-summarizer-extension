@@ -1,9 +1,21 @@
+import { decryptString } from "./crypto.js";
+
 /* background.js (fast streaming version) */
 
 const DEBUG = true;
 const log = (...a) => DEBUG && console.log("[Summarizer]", ...a);
 const warn = (...a) => DEBUG && console.warn("[Summarizer]", ...a);
 const errlog = (...a) => console.error("[Summarizer]", ...a);
+
+async function getApiKeyPlain() {
+  const { apiKeyEnc = "" } = await chrome.storage.sync.get(["apiKeyEnc"]);
+  if (!apiKeyEnc) return "";
+  try {
+    return await decryptString(apiKeyEnc);
+  } catch {
+    return "";
+  }
+}
 
 function safeString(x) {
   try {
@@ -136,7 +148,7 @@ function parseSSELines(buffer) {
 
 
 async function streamOpenAI({ apiKey, model, prompt, onDelta }) {
-  const usedModel = (model || "gpt-5-nano").trim();
+  const usedModel = (model || "gpt-5-mini").trim();
 
   // ✅ messages を必ずここで作る（スコープ問題回避）
   const messages = [{ role: "user", content: prompt }];
@@ -307,7 +319,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
       // ✅ 先にタブを開く（体感速度アップ）
       const usedProvider = provider === "gemini" ? "gemini" : "openai";
-      const usedModel = model || (usedProvider === "gemini" ? "gemini-1.5-flash" : "gpt-5-nano");
+      const usedModel = model || (usedProvider === "gemini" ? "gemini-2.5-flash" : "gpt-5-mini");
       const { key } = await openSummaryTabInitial({
         title: page.title,
         url: page.url,
@@ -372,16 +384,14 @@ chrome.commands.onCommand.addListener(async (command) => {
 
     const {
       provider = "openai",
-      apiKey = "",
       model = "",
       length = "medium"
     } = await chrome.storage.sync.get([
       "provider",
-      "apiKey",
       "model",
       "length"
     ]);
-
+const apiKey = await getApiKeyPlain();
     if (!apiKey) {
       await chrome.tabs.create({
         url: chrome.runtime.getURL("popup.html")
@@ -416,7 +426,7 @@ async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
   // 先に summary タブを開く（高速表示用）
   const usedProvider = provider === "gemini" ? "gemini" : "openai";
   const usedModel =
-    model || (usedProvider === "gemini" ? "gemini-1.5-flash" : "gpt-5-nano");
+    model || (usedProvider === "gemini" ? "gemini-2.5-flash" : "gpt-5-mini");
 
   const { key } = await openSummaryTabInitial({
     title: page.title,
@@ -458,5 +468,3 @@ async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
 
 
 log("service worker loaded");
-
-
