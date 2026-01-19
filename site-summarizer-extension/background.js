@@ -238,7 +238,7 @@ resp = await fetch("https://api.openai.com/v1/chat/completions", {
 
 async function streamGemini({ apiKey, model, prompt, onDelta }) {
   // 公式: streamGenerateContent エンドポイント :contentReference[oaicite:1]{index=1}
-  const usedModel = model || "gemini-1.5-flash";
+  const usedModel = model || "gemini-2.5-flash-lite";
 
   // ✅ key はクエリに載せる方が安定（ヘッダも併用）
   const url =
@@ -464,6 +464,7 @@ async function handleSummarizeCore({ tabId, provider, apiKey, model, length }) {
 
   sendToSummary(key, { type: "SUMMARY_DONE" });
 }
+
 
 
 
